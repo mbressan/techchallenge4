@@ -14,10 +14,8 @@ from flask import Flask, jsonify, render_template, request # Adicionado 'request
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
-import base64
 from io import BytesIO
-import pickle
-import requests
+
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
