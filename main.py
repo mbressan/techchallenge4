@@ -138,118 +138,12 @@ def avaliar_modelo(modelo, X_test, Y_test, scaler):
         "mape": mape
     }
 
-    print(f'Loss: {loss}')
-    print(f"Mean Absolute Error (MAE): {mae:.2f}")
-    print(f"Root Mean Squared Error (RMSE): {rmse:.2f}")
-    print(f"Mean Absolute Percentage Error (MAPE): {(mape):.2f}%")
-
     return resultados
-
-# --- Novas Funções para Gráficos e Previsão do Dashboard ---
-# Estas funções foram adaptadas para o dashboard que busca a previsão de amanhã
-# e exibe um gráfico que pode incluir essa previsão.
-
-def ler_dados_historicos_para_dashboard(ticker="KO", days_to_fetch=365):
-    """
-    Lê os dados históricos necessários para o gráfico do dashboard.
-    Por padrão, busca o último ano para KO (exemplo).
-    """
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=days_to_fetch)
-    coletor = ColetorDeDados(ticker, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
-    dados = coletor.coletar_dados_historicos()
-    return dados
-
-def gerar_grafico_historico(ticker="GOOG", previsao=None, data_previsao=None):
-    """Gera o gráfico de histórico de preços com a previsão, se disponível."""
-    dados = ler_dados_historicos_para_dashboard(ticker=ticker)
-    if dados is None or dados.empty:
-        return None  # Retorna None em caso de erro ou dados vazios
-
-    plt.figure(figsize=(10, 5))
-    plt.plot(dados['data_pregao'], dados['fechamento'], label='Preço de Fechamento', color='blue')
-
-    # Adicionar o ponto da previsão, se disponível
-    if previsao and data_previsao:
-        plt.scatter(data_previsao, previsao, color='red', label=f'Previsão para {data_previsao.strftime("%Y-%m-%d")}', zorder=5)
-        plt.annotate(f'${previsao:.2f}', (data_previsao, previsao), textcoords="offset points", xytext=(0,10), ha='center')
-
-    plt.xlabel('Data')
-    plt.ylabel('Preço (USD)')
-    plt.title(f'Histórico de Preços de {ticker.upper()} com Previsão')
-    plt.legend()
-    plt.grid(True)
-    plt.tight_layout() # Ajusta o layout para evitar sobreposição
-
-    # Salvar o gráfico em um buffer na memória
-    buffer = BytesIO()
-    plt.savefig(buffer, format='png')
-    buffer.seek(0)
-    plot_url = base64.b64encode(buffer.getvalue()).decode('utf-8')
-    plt.close()
-
-    return plot_url
 
 # API Flask
 
 app = Flask(__name__)
 
-# --- Rota /prever_dashboard para a lógica interna do dashboard ---
-# Esta rota busca os 30 dias mais recentes da KO e faz a previsão para amanhã.
-# É uma função auxiliar para o dashboard, não a principal /prever da API.
-@app.route('/prever_dashboard', methods=['GET'])
-def prever_para_dashboard():
-    """
-    Realiza a previsão para o dashboard, buscando os últimos 30 dias da KO.
-    """
-    ticker = "KO"
-    # Buscar os últimos TIME_STEPS dias de dados para a previsão
-    end_date = datetime.now()
-    start_date = end_date - timedelta(days=TIME_STEPS + 5) # Pegar um pouco mais de dados para garantir TIME_STEPS dias válidos após dropna
-    coletor = ColetorDeDados(ticker, start_date.strftime("%Y-%m-%d"), end_date.strftime("%Y-%m-%d"))
-    dados_recentes = coletor.coletar_dados_historicos()
-
-    if dados_recentes.empty or len(dados_recentes) < TIME_STEPS:
-        return jsonify({"mensagem": f"Não há dados suficientes ({len(dados_recentes)} dias) para gerar a previsão. Mínimo {TIME_STEPS} dias."}), 400
-
-    # Selecionar apenas a coluna 'fechamento' e pegar os últimos TIME_STEPS valores
-    # A função cria_janelas_temporais espera um array 2D
-    last_n_days_data = dados_recentes['fechamento'].values[-TIME_STEPS:].reshape(-1, 1)
-
-    try:
-        # Carregar modelo e scaler
-        # Certifique-se de que o caminho para os arquivos .keras e .pkl está correto
-        modelo = load_model('Models/modelKO.keras')
-        scaler = joblib.load('Models/scalerKO.pkl')
-
-        # Pré-processar os dados
-        # O scaler foi fitado em uma única coluna 'fechamento', então precisamos de um array 2D
-        input_scaled = scaler.transform(last_n_days_data)
-
-        # A entrada para predict deve ser (1, TIME_STEPS, 1)
-        input_for_prediction = input_scaled.reshape(1, TIME_STEPS, 1)
-
-        # Realizar a previsão
-        previsao_escalada = modelo.predict(input_for_prediction)
-
-        # Inverter a escala da previsão para a escala original
-        # A inverse_transform espera um array 2D com a mesma forma do input original
-        # Como o scaler foi fitado apenas na coluna 'fechamento', precisamos 'simular' as outras colunas para inverse_transform
-        # Criamos um array de zeros e colocamos a previsão na coluna correta (a que foi usada no fit do scaler)
-        # Assumimos que o scaler foi fitado apenas na coluna de fechamento (índice 0)
-        dummy_input = np.zeros((1, scaler.n_features_in_))
-        dummy_input[0, 0] = previsao_escalada[0, 0] # Coloca a previsão na primeira feature (fechamento)
-        previsao_original = scaler.inverse_transform(dummy_input)[0, 0]
-
-        data_previsao = datetime.now() + timedelta(days=1)
-
-        return jsonify({
-            "previsao": float(previsao_original),
-            "data_previsao": data_previsao.strftime("%Y-%m-%d")
-        }), 200
-
-    except Exception as e:
-        return jsonify({"mensagem": f"Erro ao prever: {str(e)}"}), 500
 
 # --- Rota /prever da API RESTful (recebe dados do usuário) ---
 @app.route('/prever', methods=['POST'])
@@ -335,40 +229,6 @@ def coletar_dados_treinar():
     joblib.dump(scaler, os.path.join("Models", "scalerKO.pkl")) # Usar os.path.join
 
     return jsonify({"mensagem": "Dados coletados e modelo treinado!", "resultados_avaliacao": resultados_avaliacao}), 200
-
-
-@app.route("/")
-def dashboard():
-    """Rota principal do dashboard."""
-    # Chamando a nova rota interna para a previsão do dashboard
-    previsao_data = requests.get(request.url_root + 'prever_dashboard').json()
-
-    mensagem_previsao = "Não foi possível obter a previsão."
-    previsao_valor = None
-    data_previsao_obj = None
-
-    if previsao_data and "previsao" in previsao_data:
-        previsao_valor = previsao_data['previsao']
-        data_previsao_str = previsao_data.get('data_previsao', '')
-        if data_previsao_str:
-            data_previsao_obj = datetime.strptime(data_previsao_str, "%Y-%m-%d")
-            mensagem_previsao = f"Previsão para {data_previsao_str}: ${previsao_valor:.2f}"
-        else:
-            mensagem_previsao = f"Previsão: ${previsao_valor:.2f}"
-    elif previsao_data and "mensagem" in previsao_data:
-        mensagem_previsao = previsao_data['mensagem']
-
-    grafico_historico = gerar_grafico_historico(
-        ticker="KO", # Alterado para KO para consistência
-        previsao=previsao_valor,
-        data_previsao=data_previsao_obj
-    )
-
-    return render_template(
-        "dashboard.html",
-        grafico_historico=grafico_historico,
-        mensagem_previsao=mensagem_previsao
-    )
 
 # Exemplo de Uso (para teste)
 if __name__ == '__main__':
