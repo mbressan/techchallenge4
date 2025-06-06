@@ -17,6 +17,7 @@ from datetime import datetime, timedelta
 import base64
 from io import BytesIO
 import pickle
+import requests
 
 # Carregar variáveis de ambiente do arquivo .env
 load_dotenv()
@@ -239,5 +240,4 @@ if __name__ == '__main__':
 
     # Iniciar a API
     # Importar requests para usar na rota dashboard
-    import requests
     app.run(debug=False, use_reloader=False)
