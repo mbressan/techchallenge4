@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard de Ações GOOG</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .dashboard-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .chart-container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            width: 80%; /* Ajuste a largura conforme necessário */
+            max-width: 1000px;
+        }
+        .chart {
+            width: 100%;
+            height: auto;
+        }
+        .previsao-container {
+            text-align: center;
+            font-size: 1.2em;
+            color: #007bff;
+        }
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 0.9em;
+            color: #555;
+        }
+        footer a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        footer a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <h1>Dashboard de Ações GOOG</h1>
+    <div class="dashboard-container">
+        <div class="chart-container">
+            <h2>Histórico de Preços</h2>
+            {% if grafico_historico %}
+                <img src="data:image/png;base64,{{ grafico_historico }}" alt="Histórico de Preços" class="chart">
+            {% else %}
+                <p>Não foi possível carregar o gráfico de histórico.</p>
+            {% endif %}
+        </div>
+
+        <div class="chart-container">
+            <h2>Previsão de Preço</h2>
+            {% if mensagem_previsao %}
+                <div class="previsao-container">
+                    <p>{{ mensagem_previsao }}</p>
+                </div>
+            {% else %}
+                <p>Não foi possível obter a previsão.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <footer>
+        <p>Desenvolvido por <strong>Mateus Bressan</strong></p>
+        <p>Repositório no GitHub: <a href="https://github.com/mbressan/techchallenge3" target="_blank">https://github.com/mbressan/techchallenge3</a></p>
+        <p>Tech Challenge Etapa 3 - Pós-Graduação em Machine Learning Engineer - FIAP</p>
+    </footer>
+</body>
+</html>
