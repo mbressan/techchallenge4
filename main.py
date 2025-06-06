@@ -205,7 +205,7 @@ def coletar_dados_treinar():
     # Coletar e processar dados históricos até o dia anterior
     ticker = "KO"
     data_inicio = "2010-01-01"
-    data_fim = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+    data_fim = "2025-05-28"
 
     print(f"Coletando dados de {ticker} de {data_inicio} a {data_fim}...")
 
