@@ -2,6 +2,8 @@
 
 **Aluno:** Mateus Bressan
 
+**Video Explicativo:** https://www.youtube.com/watch?v=i3u7iGFIHCY
+
 ## Descrição do Projeto e Objetivo Principal
 
 Este projeto consiste em um sistema de **previsão do valor de fechamento de ações** utilizando técnicas de **Deep Learning**. O objetivo principal é desenvolver uma **pipeline completa de Machine Learning**, desde a coleta e pré-processamento de dados até a criação de um modelo preditivo (LSTM) e seu deploy em uma **API RESTful**.
