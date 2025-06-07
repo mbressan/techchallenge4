@@ -78,9 +78,8 @@ docker build -t previsao-acoes-ko .
 #### Executar o Contêiner Docker
 
 ```bash
-docker run -p 5000:5000 -v $(pwd)/app_monitor.log:/app/app_monitor.log previsao-acoes-ko
+docker run -p 5000:5000 previsao-acoes-ko
 ```
-- O parâmetro `-v` mapeia o arquivo de log do container para o host, permitindo acesso fácil aos logs.
 
 ### 5. Como Treinar o Modelo
 
