@@ -119,16 +119,6 @@ Aguarde a mensagem **"Dados coletados e modelo treinado!"**. O modelo e o scaler
 
 > O valor retornado estará formatado com duas casas decimais.
 
-### 7. Como Acessar o Dashboard
-
-Após a API estar rodando e o modelo treinado, acesse:
-
-```
-http://localhost:5000/
-```
-
-O dashboard buscará automaticamente a previsão para amanhã das ações da KO e exibirá um gráfico histórico.
-
 ---
 
 ## Monitoramento
