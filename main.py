@@ -10,16 +10,16 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import LSTM, Dropout, Dense
 from tensorflow.keras.callbacks import EarlyStopping
-from flask import Flask, jsonify, render_template, request 
+from flask import Flask, jsonify, render_template, request
 import os
 from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import base64
 from io import BytesIO
-import time 
+import time
 import psutil
-import logging 
-import requests 
+import logging
+import requests
 
 
 # Carregar variáveis de ambiente do arquivo .env
@@ -28,7 +28,7 @@ load_dotenv()
 # --- Constante para time_steps ---
 # Definir o número de passos de tempo que o modelo espera.
 # Isso deve ser o mesmo valor usado durante o treinamento do modelo.
-TIME_STEPS = 30 
+TIME_STEPS = 30
 
 # --- Configuração de Logging ---
 # Configura o sistema de logging para registrar informações em um arquivo.
@@ -36,6 +36,8 @@ logging.basicConfig(filename='app_monitor.log', level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s')
 
 # Classe para Coleta de Dados
+
+
 class ColetorDeDados:
     """Classe para coleta de dados históricos de ações."""
 
@@ -63,18 +65,20 @@ class ColetorDeDados:
         return dados
 
 # Função das janelas temporais
+
+
 def cria_janelas_temporais(data, time_steps=TIME_STEPS):
     X, y = [], []
     for i in range(len(data) - time_steps):
-        X.append(data[i:i+time_steps, 0])
-        y.append(data[i+time_steps, 0])
+        X.append(data[i:i + time_steps, 0])
+        y.append(data[i + time_steps, 0])
     return np.array(X), np.array(y)
 
 
 def pre_processar_dados(dados):
     if 'fechamento' not in dados.columns and 'Close' in dados.columns:
         dados = dados.rename(columns={'Close': 'fechamento'})
-    
+
     dados_fechamento = dados[['fechamento']]
 
     scaler = MinMaxScaler(feature_range=(0, 1))
@@ -83,7 +87,7 @@ def pre_processar_dados(dados):
     X, Y = cria_janelas_temporais(df_scaled)
     X = X.reshape((X.shape[0], X.shape[1], 1))
 
-    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size = 0.2, random_state = 42)
+    X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=42)
 
     print(X_train.shape)
     print(Y_train.shape)
@@ -93,12 +97,14 @@ def pre_processar_dados(dados):
     return X_train, X_test, Y_train, Y_test, scaler
 
 # Funções de Modelagem
+
+
 def treinar_modelo(X_treino, y_treino):
     """Treina o modelo LSTM."""
     model = Sequential()
-    model.add(LSTM( units=100,
-                    activation='relu',
-                    input_shape=(X_treino.shape[1], 1)))
+    model.add(LSTM(units=100,
+                   activation='relu',
+                   input_shape=(X_treino.shape[1], 1)))
     model.add(Dropout(0.2))
     model.add(Dense(units=1))
 
@@ -107,12 +113,12 @@ def treinar_modelo(X_treino, y_treino):
     early_stopping = EarlyStopping(monitor='val_loss', patience=5)
 
     model.fit(X_treino,
-            y_treino,
-            epochs=50,
-            batch_size=32,
-            validation_split=0.2,
-            callbacks=[early_stopping],
-            verbose=0)
+              y_treino,
+              epochs=50,
+              batch_size=32,
+              validation_split=0.2,
+              callbacks=[early_stopping],
+              verbose=0)
 
     return model
 
@@ -127,7 +133,7 @@ def avaliar_modelo(modelo, X_test, Y_test, scaler):
     loss = modelo.evaluate(X_test, Y_test, verbose=0)
     mae = mean_absolute_error(Y_test_rescaled, Y_pred_rescaled)
     rmse = np.sqrt(root_mean_squared_error(Y_test_rescaled, Y_pred_rescaled))
-    mape = mean_absolute_percentage_error(Y_test_rescaled, Y_pred_rescaled)*100
+    mape = mean_absolute_percentage_error(Y_test_rescaled, Y_pred_rescaled) * 100
 
     resultados = {
         "loss": loss,
@@ -139,6 +145,8 @@ def avaliar_modelo(modelo, X_test, Y_test, scaler):
     return resultados
 
 # --- Funções de Monitoramento ---
+
+
 def get_resource_usage():
     """Coleta o uso de CPU e memória do processo atual."""
     process = psutil.Process(os.getpid())
@@ -146,20 +154,23 @@ def get_resource_usage():
     memory_info = process.memory_info()
     return {
         "cpu_percent": cpu_percent,
-        "memory_mb": memory_info.rss / (1024 * 1024) # Resident Set Size in MB
+        "memory_mb": memory_info.rss / (1024 * 1024)  # Resident Set Size in MB
     }
+
 
 # API Flask
 app = Flask(__name__)
 
 # --- Rota /prever da API RESTful (recebe dados do usuário) ---
+
+
 @app.route('/prever', methods=['POST'])
 def prever_acao():
     """
     Realiza a previsão do valor da ação com base nos dados históricos de preços fornecidos pelo usuário.
     Também registra métricas de monitoramento.
     """
-    start_time = time.time() # Inicia o timer
+    start_time = time.time()  # Inicia o timer
     data = request.get_json()
 
     if not data or 'historical_prices' not in data:
@@ -169,8 +180,10 @@ def prever_acao():
     historical_prices = data['historical_prices']
 
     if len(historical_prices) < TIME_STEPS:
-        logging.warning(f"Dados insuficientes para /prever. Fornecido: {len(historical_prices)}, Esperado: {TIME_STEPS}.")
-        return jsonify({"mensagem": f"Dados insuficientes. É necessário fornecer pelo menos {TIME_STEPS} preços históricos."}), 400
+        logging.warning(
+            f"Dados insuficientes para /prever. Fornecido: {len(historical_prices)}, Esperado: {TIME_STEPS}.")
+        return jsonify(
+            {"mensagem": f"Dados insuficientes. É necessário fornecer pelo menos {TIME_STEPS} preços históricos."}), 400
 
     input_data = np.array(historical_prices[-TIME_STEPS:]).reshape(-1, 1)
 
@@ -189,17 +202,23 @@ def prever_acao():
         previsao_escalada = modelo.predict(input_for_prediction)
 
         # Inverter a escala da previsão para o valor original
-        # O scaler foi fitado apenas na coluna 'fechamento', então precisamos 'simular' a mesma forma para inverse_transform
+        # O scaler foi fitado apenas na coluna 'fechamento', então precisamos
+        # 'simular' a mesma forma para inverse_transform
         dummy_input = np.zeros((1, scaler.n_features_in_))
         dummy_input[0, 0] = previsao_escalada[0, 0]
         previsao_original = scaler.inverse_transform(dummy_input)[0, 0]
 
-        end_time = time.time() # Finaliza o timer
-        response_time = (end_time - start_time) * 1000 # Tempo em milissegundos
-        
-        resources = get_resource_usage() # Coleta uso de recursos
+        end_time = time.time()  # Finaliza o timer
+        response_time = (end_time - start_time) * 1000  # Tempo em milissegundos
 
-        logging.info(f"API Prever - Previsão: {previsao_original:.2f}, Tempo de Resposta: {response_time:.2f} ms, CPU: {resources['cpu_percent']:.2f}%, Memória: {resources['memory_mb']:.2f} MB")
+        resources = get_resource_usage()  # Coleta uso de recursos
+
+        logging.info(
+            f"API Prever - Previsão: {
+                previsao_original:.2f}, Tempo de Resposta: {
+                response_time:.2f} ms, CPU: {
+                resources['cpu_percent']:.2f}%, Memória: {
+                    resources['memory_mb']:.2f} MB")
 
         return jsonify({"previsao": float(f"{previsao_original:.2f}")}), 200
 
@@ -210,19 +229,25 @@ def prever_acao():
         end_time = time.time()
         response_time = (end_time - start_time) * 1000
         resources = get_resource_usage()
-        logging.error(f"Erro na previsão da API: {str(e)}, Tempo de Resposta: {response_time:.2f} ms, CPU: {resources['cpu_percent']:.2f}%, Memória: {resources['memory_mb']:.2f} MB")
+        logging.error(
+            f"Erro na previsão da API: {
+                str(e)}, Tempo de Resposta: {
+                response_time:.2f} ms, CPU: {
+                resources['cpu_percent']:.2f}%, Memória: {
+                    resources['memory_mb']:.2f} MB")
         return jsonify({"mensagem": f"Erro ao prever: {str(e)}"}), 500
+
 
 @app.route('/treinarmodelo', methods=['GET'])
 def coletar_dados_treinar():
-    start_time = time.time() # Inicia o timer para o treinamento
+    start_time = time.time()  # Inicia o timer para o treinamento
     print("Iniciando o treinamento do modelo...")
 
     ticker = "KO"
     data_inicio = "2010-01-01"
-    data_fim = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d") # CORRIGIDO AQUI
+    data_fim = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")  # CORRIGIDO AQUI
 
-    print(f"Coletando dados de {ticker} de {data_inicio} a {data_fim}...\n") # Adicionado \n para melhor visualização
+    print(f"Coletando dados de {ticker} de {data_inicio} a {data_fim}...\n")  # Adicionado \n para melhor visualização
 
     coletor = ColetorDeDados(ticker, data_inicio, data_fim)
     dados = coletor.coletar_dados_historicos()
@@ -240,17 +265,23 @@ def coletar_dados_treinar():
     modelo.save(os.path.join("Models", "modelKO.keras"))
     joblib.dump(scaler, os.path.join("Models", "scalerKO.pkl"))
 
-    end_time = time.time() # Finaliza o timer
-    response_time = (end_time - start_time) * 1000 # Tempo em milissegundos
-    resources = get_resource_usage() # Coleta uso de recursos
+    end_time = time.time()  # Finaliza o timer
+    response_time = (end_time - start_time) * 1000  # Tempo em milissegundos
+    resources = get_resource_usage()  # Coleta uso de recursos
 
-    logging.info(f"Treinamento do Modelo - Duração: {response_time:.2f} ms, CPU: {resources['cpu_percent']:.2f}%, Memória: {resources['memory_mb']:.2f} MB, Resultados: {resultados_avaliacao}")
+    logging.info(
+        f"Treinamento do Modelo - Duração: {
+            response_time:.2f} ms, CPU: {
+            resources['cpu_percent']:.2f}%, Memória: {
+                resources['memory_mb']:.2f} MB, Resultados: {resultados_avaliacao}")
 
-    return jsonify({"mensagem": "Dados coletados e modelo treinado!", "resultados_avaliacao": resultados_avaliacao}), 200
+    return jsonify({"mensagem": "Dados coletados e modelo treinado!",
+                   "resultados_avaliacao": resultados_avaliacao}), 200
+
 
 # Exemplo de Uso (para teste)
 if __name__ == '__main__':
-    
+
     # Iniciar a API
     # Importar requests para usar na rota dashboard
     app.run(debug=False, use_reloader=False)
